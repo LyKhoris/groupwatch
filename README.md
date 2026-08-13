@@ -8,6 +8,10 @@ folder of video files, perfectly synchronized playback. Powered, invisibly, by
 **Status: early development.** The full project spec, decisions, and roadmap
 live in [AGENTS.md](AGENTS.md).
 
+> **Personal use only.** This is built for one private friend group, not for
+> public deployment. It was also fully vibecoded with opencode + kimi k3 — so
+> expect rough edges and no warranty.
+
 ## Downloads (for group members)
 
 Installers are built automatically and published on the
