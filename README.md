@@ -11,17 +11,14 @@ live in [AGENTS.md](AGENTS.md).
 ## Downloads (for group members)
 
 Installers are built automatically and published on the
-[Releases](../../releases) page. The repo is **private**, so group members need
-a free GitHub account and must be added to the repo as a collaborator to
-download:
+[Releases](../../releases) page (public — no account needed to download):
 
 - **Windows:** `groupwatch-setup-x.y.z.exe` — a normal installer wizard
   (Next → Next → Finish).
 - **Linux:** `groupwatch-x.y.z.AppImage` — download, allow executing
   (right-click → Properties), double-click.
 
-No terminal, no configuration files. (A GitHub account is needed only to access
-downloads; the app itself has no accounts.)
+No terminal, no configuration files, no accounts.
 
 ## Development
 

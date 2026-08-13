@@ -274,8 +274,7 @@ groupwatch/
 ## 7. Phased roadmap
 
 **Status:** Phase 0 **complete** — repo live at <https://github.com/LyKhoris/groupwatch>
-(**private**; group members are added as collaborators so they can download releases — a free
-GitHub account is required for downloads, the app itself has no accounts). Tag a `vX.Y.Z` on
+(**public**, so group members can download releases without GitHub accounts). Tag a `vX.Y.Z` on
 `main` and GitHub Actions builds both installers into Releases. Next up: **Phase 1 — sync engine**.
 
 | Phase | Deliverable | Exit criteria |
