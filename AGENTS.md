@@ -102,6 +102,11 @@ High-level components and how they communicate:
   folder, sorted), the **people panel** (who's online + per-member sync progress), **invite**
   generation, and **settings** (player choice, autostart toggle, folder location, server override).
 - Closing the window never stops the service. Quitting is an explicit tray action.
+- **Linux tray visibility quirk:** tray icons are not universal on Linux. GNOME hides them unless
+  the "AppIndicator and KStatusNotifierItem Support" extension is installed; on Wayland compositors
+  (e.g. Hyprland) they appear only if the bar/shell has a tray module. Because "launched but
+  invisible" reads as broken to non-technical users, **the app shows its window on launch** (first
+  run behavior), then lives in the tray afterward.
 
 ### 3.2 Sync engine (Syncthing wrapper)
 
@@ -267,6 +272,10 @@ groupwatch/
 ---
 
 ## 7. Phased roadmap
+
+**Status:** Phase 0 **complete** — repo live at <https://github.com/LyKhoris/groupwatch> (public,
+so group members can download releases without GitHub accounts). Tag a `vX.Y.Z` on `main` and
+GitHub Actions builds both installers into Releases. Next up: **Phase 1 — sync engine**.
 
 | Phase | Deliverable | Exit criteria |
 |---|---|---|
