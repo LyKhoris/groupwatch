@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "groupwatch"
+description = "Watch videos together with friends: one auto-synced folder, perfectly synced playback. Powered invisibly by Syncthing + Syncplay."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+dynamic = ["version"]
+dependencies = [
+    # Pinned major/minor per AGENTS.md §8 (minimal, pinned deps).
+    # PySide6-Essentials (not full PySide6): QtWidgets/QtGui/QtCore only, smaller installers.
+    "PySide6-Essentials>=6.9,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller>=6.10,<7",
+    "pillow>=10,<12",  # only for regenerating assets/icon.* (assets/make_icon.py)
+]
+
+[project.scripts]
+groupwatch = "groupwatch.__main__:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "groupwatch.__version__" }

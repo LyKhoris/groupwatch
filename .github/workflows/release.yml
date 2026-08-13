@@ -1,0 +1,76 @@
+name: Release
+
+# Push a tag like v0.1.0 to build both installers and publish them to
+# GitHub Releases (AGENTS.md §6). Can also be run manually for a dry run
+# (builds only, nothing published).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . pyinstaller
+
+      - name: Build app binary
+        run: pyinstaller --noconfirm packaging/groupwatch.spec
+
+      - name: Smoke test binary
+        run: dist\groupwatch\groupwatch.exe --version
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+') { $version = "0.0.0-dev" }
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=$version packaging\windows\installer.iss
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/installer/groupwatch-setup-*.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . pyinstaller
+
+      - name: Build app binary
+        run: pyinstaller --noconfirm packaging/groupwatch.spec
+
+      - name: Smoke test binary
+        run: dist/groupwatch/groupwatch --version
+
+      - name: Build AppImage
+        run: bash packaging/linux/build_appimage.sh "${{ github.ref_name }}"
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/groupwatch-*-x86_64.AppImage

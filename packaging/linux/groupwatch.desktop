@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=groupwatch
+Comment=Watch synced videos together with friends
+Exec=groupwatch
+Icon=groupwatch
+Categories=AudioVideo;Video;
+Terminal=false
