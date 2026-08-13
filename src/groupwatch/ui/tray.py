@@ -46,4 +46,9 @@ def run_tray_app() -> int:
 
     tray.activated.connect(_on_activated)
     tray.show()
+
+    # Show the window on launch: some desktops (GNOME) hide tray icons
+    # entirely, and "launched but invisible" reads as "broken" to users.
+    window.show()
+
     return app.exec()
