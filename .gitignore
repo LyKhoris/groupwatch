@@ -11,3 +11,8 @@ dist/
 # AppImage staging
 AppDir/
 *.AppImage
+
+# Vendored binaries — fetched at build time by tools/fetch_syncthing.py / CI.
+# Only vendor/syncthing/VERSION and vendor/syncthing/LICENSE are committed.
+vendor/syncthing/linux-amd64/
+vendor/syncthing/windows-amd64/

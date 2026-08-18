@@ -125,6 +125,8 @@ High-level components and how they communicate:
 - Syncthing's own NAT traversal (relays/hole-punching) means file sync needs **no router config**.
 - The sync engine exposes per-device, per-file completion state (via the Syncthing API) to power
   the readiness gate and the people panel.
+- Runs on non-default ports (API on `127.0.0.1:18384`, sync listen on `22999`) and binds its web
+  UI to localhost, so it never clashes with — or is confused with — a user's own Syncthing install.
 
 ### 3.3 Syncplay engine (invisible to users)
 
@@ -248,6 +250,9 @@ groupwatch/
 ├── packaging/
 │   ├── windows/               ← installer definition (e.g., Inno Setup)
 │   └── linux/                 ← AppImage recipe
+├── tools/
+│   ├── fetch_syncthing.py     ← downloads the pinned Syncthing binary (dev + CI)
+│   └── e2e_sync_test.py       ← Phase 1 exit-criteria test (two instances, one machine)
 └── .github/workflows/
     └── release.yml            ← matrix build → GitHub Releases
 ```
@@ -267,15 +272,19 @@ groupwatch/
   published to GitHub Releases. No developer or user machine needs build tooling.
 - **Bundled binaries:** Syncthing and mpv are pinned to specific upstream versions, fetched at
   CI/build time per platform, never hand-updated in the repo.
+  - Vendored binaries are **gitignored** (only `VERSION` + `LICENSE` are committed);
+    `tools/fetch_syncthing.py` downloads them, and CI runs it before packaging.
 - Never commit secrets (Syncthing API keys, device IDs are per-install, generated at first run).
 
 ---
 
 ## 7. Phased roadmap
 
-**Status:** Phase 0 **complete** — repo live at <https://github.com/LyKhoris/groupwatch>
+**Status:** Phases **0–1 complete** — repo live at <https://github.com/LyKhoris/groupwatch>
 (**public**, so group members can download releases without GitHub accounts). Tag a `vX.Y.Z` on
-`main` and GitHub Actions builds both installers into Releases. Next up: **Phase 1 — sync engine**.
+`main` and GitHub Actions builds both installers into Releases. Phase 1's sync engine is proven by
+`tools/e2e_sync_test.py` (two instances sync a folder end-to-end, zero Syncthing UI). Next up:
+**Phase 2 — Syncplay engine + mpv**.
 
 | Phase | Deliverable | Exit criteria |
 |---|---|---|

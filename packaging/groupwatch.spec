@@ -11,7 +11,11 @@ a = Analysis(
     [os.path.join(ROOT, "src/groupwatch/__main__.py")],
     pathex=[os.path.join(ROOT, "src")],
     binaries=[],
-    datas=[(os.path.join(ROOT, "assets"), "assets")],
+    datas=[
+        (os.path.join(ROOT, "assets"), "assets"),
+        # Bundled Syncthing binary (fetched by tools/fetch_syncthing.py before the build).
+        (os.path.join(ROOT, "vendor"), "vendor"),
+    ],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
