@@ -41,6 +41,7 @@ class MpvAdapter(PlayerAdapter):
         self._reader: threading.Thread | None = None
         self._lock = threading.Lock()
         self._next_request_id = 1
+        self._next_observe_id = 1
         self._pending: dict[int, dict] = {}
         self._pending_event = threading.Event()
 
@@ -50,11 +51,13 @@ class MpvAdapter(PlayerAdapter):
         self._duration = 0.0
         self._path = ""
         self._seek_guard_until = 0.0
+        self._socket_path: str | None = None
 
     # ------------------------------------------------------------------ launch
 
     def start(self) -> None:
         sock_path = self._make_socket_path()
+        self._socket_path = sock_path
         args = [
             self.binary,
             "--idle=yes",
@@ -94,6 +97,11 @@ class MpvAdapter(PlayerAdapter):
             tempfile.gettempdir(), f"groupwatch-mpv-{os.getpid()}.sock"
         )
 
+    @property
+    def socket_path(self) -> str | None:
+        """IPC endpoint (tests may open their own connection to simulate UI input)."""
+        return self._socket_path
+
     def _try_connect(self, sock_path: str) -> bool:
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -131,7 +139,11 @@ class MpvAdapter(PlayerAdapter):
             pass
 
     def _observe(self, prop: str) -> None:
-        self._send({"command": ["observe_property", prop, prop]})
+        # mpv's observe_property takes a NUMERIC id: ["observe_property", <id>, <name>]
+        with self._lock:
+            oid = self._next_observe_id
+            self._next_observe_id += 1
+        self._send({"command": ["observe_property", oid, prop]})
 
     def _read_loop(self) -> None:
         buf = b""

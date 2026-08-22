@@ -283,11 +283,74 @@ groupwatch/
 
 ## 7. Phased roadmap
 
-**Status:** Phases **0–1 complete** — repo live at <https://github.com/LyKhoris/groupwatch>
-(**public**, so group members can download releases without GitHub accounts). Tag a `vX.Y.Z` on
-`main` and GitHub Actions builds both installers into Releases. Phase 1's sync engine is proven by
-`tools/e2e_sync_test.py` (two instances sync a folder end-to-end, zero Syncthing UI). Next up:
-**Phase 2 — Syncplay engine + mpv**.
+**Status:** Phases **0–1 complete; Phase 2 ~90% done (see handoff below)** — repo live at
+<https://github.com/LyKhoris/groupwatch> (**public**, so group members can download releases
+without GitHub accounts). Tag a `vX.Y.Z` on `main` and GitHub Actions builds both installers into
+Releases.
+
+### Session handoff — READ FIRST when resuming (last updated 2026-08-22, pre-distrohop)
+
+**Where Phase 2 stands:** the invisible Syncplay client and our own minimal embedded server are
+built and protocol-verified. The final exit-criteria test (`tools/e2e_mpv_test.py`: two real
+headless mpvs through our embedded server) currently FAILS due to one diagnosed, unfixed bug:
+
+> **THE BUG — fix this first.** In `src/groupwatch/syncplay/server.py`, `_handle_state` treats any
+> reported position drifting more than `POSITION_EPSILON_S` from the room as "significant" and
+> adopts it as the room position. A member that lags behind (or hasn't seeked yet) therefore drags
+> the room BACKWARD. Symptom in `e2e_mpv_test.py`: B follows A's *unpause* but not A's seek to
+> 120s; moments later B's stale 0s becomes the room position and client-side rewind logic yanks A
+> back too.
+> **THE FIX:** room position may change ONLY on control actions — pause toggled or `doSeek` set —
+> never from passive position reports (this is upstream's model too). Delete the epsilon logic;
+> adopt the actor's reported position only on control changes, then forced-broadcast. Afterwards:
+> `tools/e2e_playback_test.py` must stay green AND `tools/e2e_mpv_test.py` must go green.
+
+**Done and verified this phase:**
+- **Invisible client (`syncplay/client.py`)** — passes `tools/e2e_playback_test.py` against BOTH
+  our embedded server and upstream's (`--upstream` flag). Handles ignoringOnTheFly flow control,
+  latency compensation (PingService math mirrored from upstream), self-healing divergence
+  rebroadcast on a 0.2s tick, `setBy` attribution (own echoes are never re-applied to the player —
+  fixed an echo-re-pause deadlock), and user actions bypass the correction guard (fixed a
+  guard-starvation deadlock where a locally-paused member could never broadcast).
+- **Own minimal embedded server (`syncplay/server.py`)** — owner APPROVED replacing the original
+  "vendored upstream + Twisted" plan (decision log §4). Heartbeats, forced broadcasts,
+  presence/file announcements, username dedupe, ephemeral-port support for tests.
+- **mpv adapter (`players/mpv.py`)** — smoke-tested headless: loadfile, duration/filename events,
+  pause, seek, live-position extrapolation between property events. Gotcha learned:
+  `observe_property` requires NUMERIC ids (`["observe_property", <id>, <name>]`), not name-name.
+- **`players/base.py`** adapter interface; adapter `on_change`/`on_file_loaded` events power
+  user-action detection. `UserHand` in e2e_mpv_test.py simulates humans by opening a second IPC
+  connection and issuing real keybinding-equivalent commands (`cycle pause`, absolute seek).
+
+**Remaining after the server fix, to close Phase 2:**
+1. Fix the bug above until both playback tests are green (run each 3× — flakiness bit us once).
+2. `platform/upnp.py`: stdlib UPnP IGD port-forward for the leader's server (SSDP discovery +
+   SOAP AddPortMapping/DeletePortMapping); graceful failure → plain-language manual-forwarding
+   hint arrives later (Phase 6 UI). Wire it next to `SyncplayServer` startup, leader role only.
+3. Flip §7 status/table to Phase 2 complete once green; commit + push.
+
+**Dev environment recreation on a fresh machine (distrohop!):**
+- System packages: `sudo pacman -S --needed git github-cli mpv ffmpeg`; then `gh auth login`
+  (GitHub.com → HTTPS → authenticate git → browser) so pushes work.
+- Repo identity: `git config user.name "LyKhoris" && git config user.email
+  "lykhoris@users.noreply.github.com"` (was local-only config).
+- Python venv: `python -m venv .venv && .venv/bin/pip install -e '.[dev]'`. Add `twisted` ONLY if
+  running upstream-compat checks.
+- Upstream reference checkout (for `--upstream` compat runs):
+  `git clone --depth 1 https://github.com/Syncplay/syncplay /tmp/syncplay_src` then
+  `.venv/bin/python /tmp/syncplay_src/syncplayServer.py --port 8999 --isolate-rooms &`.
+- Test clip auto-generates via ffmpeg inside `e2e_mpv_test.py` (`/tmp/groupwatch-test.mp4`).
+- Study copies of Syncplay sources lived in `/tmp/syncplay_ref` (re-fetchable from GitHub raw;
+  deliberately NOT in the repo).
+
+**Test suite quick reference:**
+
+| Command | Proves |
+|---|---|
+| `python tools/e2e_sync_test.py` | Phase 1: two Syncthing instances sync a file end-to-end, zero UI |
+| `python tools/e2e_playback_test.py` | Protocol sync through OUR embedded server (mock players) |
+| `python tools/e2e_playback_test.py --upstream` | Same through real upstream server (compat check) |
+| `python tools/e2e_mpv_test.py` | **Phase 2 exit criteria** (currently red — fix THE BUG above) |
 
 | Phase | Deliverable | Exit criteria |
 |---|---|---|
