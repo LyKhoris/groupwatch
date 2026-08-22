@@ -134,10 +134,11 @@ High-level components and how they communicate:
   reference implementation: Syncplay's own Python source, same language). Friends never see any
   Syncplay UI. The client auto-joins the group's single fixed room on every launch and handles
   play/pause/seek state sync and latency correction.
-- **Embedded server (leader only):** the leader's app runs the Syncplay server (vendored from
-  upstream, GPLv3 — see §6 licensing) as a managed background component, auto-started whenever the
-  leader's machine is on. The app auto-forwards the server TCP port via **UPnP**; if UPnP fails,
-  it shows plain-language manual port-forwarding guidance.
+- **Embedded server (leader only):** the leader's app runs groupwatch's **own minimal
+  Syncplay-protocol server** (stdlib-only, in-process threads — decision log §4) as a managed
+  background component, auto-started whenever the leader's machine is on. The app auto-forwards
+  the server TCP port via **UPnP**; if UPnP fails, it shows plain-language manual port-forwarding
+  guidance.
 - **Server address is a config value.** Leader-hosted is the default, but a VPS or a public
   Syncplay server can be substituted in settings without any code change.
 - No chat or social protocol features are surfaced, even though the protocol supports them.
@@ -192,6 +193,7 @@ project owner's explicit approval.**
 | File sync | **Stock Syncthing, wrapped & hidden** (app-generated config, REST-API-driven, auto-approve) | Battle-tested NAT traversal, delta sync, resume; zero user-visible surface after wrapping | **Build our own P2P sync** — NAT traversal + delta sync + conflicts = rebuilding years of hardening, strictly worse; **Fork/strip Syncthing source** — maintaining a fork of a ~100k-line Go codebase for no functional gain |
 | Sync conflicts | **One-way topology: leader send-only, friends receive-only** | Conflicts become structurally impossible (single writer); friends can't delete/overwrite the group's files | Two-way sync + conflict resolution UX (owner: "I'd rather not deal with that") |
 | Syncplay server location | **Leader's PC, bundled server, UPnP port-forward** | Free; leader attends every session anyway; address is a config value so VPS/public servers are drop-in upgrades | **VPS** (costs money, setup burden — kept as an option), **public Syncplay servers** (shared with strangers, no uptime control) |
+| Embedded server implementation | **Own minimal protocol server (stdlib-only)** | Every client is groupwatch's invisible client, so full upstream-server compatibility isn't needed; avoids shipping the Twisted framework and its packaging fragility; ~200 auditable lines instead of vendoring most of upstream's package; e2e-verified against both our server AND upstream's | **Vendor upstream server** — decade of hardening and full compat, but drags Twisted into installers, fights embedding in a Qt process (subprocess glue), ships dead-weight features banned by §2 |
 | Syncplay client | **Invisible custom protocol client** | Only way to hit the zero-friction bar: friends never see or operate Syncplay's own window (no ready-buttons, foreign fields, mismatch dialogs) | **Wrap the official client** — faster, but forces non-technical friends to operate a second app every session; "wrapped v1 → custom v2" considered, rejected because v1 friction lands exactly on the least technical users |
 | Media players | **mpv (bundled, default) + VLC (detected install)** via adapter layer | mpv = zero-setup clean IPC; VLC = most common player non-technical users already have | VLC-only, mpv-only, bundling VLC (too large) |
 | UI form | **24/7 background service + tray icon + popup window** | Syncthing must run 24/7 regardless → background service is mandatory; tray = glanceable zero-friction; window = room for library/progress/invites. Dropbox/SyncTrayzor pattern | Tray-only (cramped), window-only (accidental-close risk) |
@@ -231,7 +233,7 @@ groupwatch/
 │   ├── syncplay/
 │   │   ├── protocol.py        ← message framing (JSON-over-TCP)
 │   │   ├── client.py          ← room join, state sync, latency correction
-│   │   └── server.py          ← embedded leader-side server (vendored upstream)
+│   │   └── server.py          ← embedded leader-side server (own minimal impl)
 │   ├── players/
 │   │   ├── base.py            ← adapter interface
 │   │   ├── mpv.py             ← JSON IPC (bundled default)
@@ -262,8 +264,9 @@ groupwatch/
 ## 6. Build & release workflow
 
 - **Version control:** git, hosted on GitHub. Small, focused commits; plain commit messages.
-- **Licensing:** groupwatch is **GPLv3**. Rationale: the embedded Syncplay server components are
-  GPLv3 (vendored in `vendor/` with attribution). Syncthing is MPL-2.0 and is bundled as an
+- **Licensing:** groupwatch is **GPLv3**. No Syncplay *code* is vendored — its protocol is
+  re-implemented from source study (reference-only use) and the embedded server is our own
+  implementation (decision log §4). Syncthing is MPL-2.0 and is bundled as an
   **unmodified binary** driven via its API — permissible alongside GPL. Keep upstream licenses in
   `vendor/` and `LICENSE` files accurate.
 - **Releases:** tagging a version triggers **GitHub Actions** matrix builds producing:

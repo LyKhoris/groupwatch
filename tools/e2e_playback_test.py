@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Phase 2 protocol test: two groupwatch syncplay clients stay in sync through
-a REAL upstream Syncplay server, using a mock player (no mpv needed).
+"""Phase 2 protocol test: two groupwatch syncplay clients stay in sync.
 
-Proves the invisible client speaks the protocol correctly: a seek+play on one
-client lands on the other, and a pause on the second lands back on the first.
+By default the test is self-contained: it starts OUR embedded minimal server
+(groupwatch.syncplay.server) on an ephemeral port and connects two clients
+with mock players (no mpv needed). A seek+play on one client must land on the
+other, and a pause on the second must land back on the first.
 
-Prereq: a syncplay server on 127.0.0.1:8999, e.g. from a source checkout:
-    python syncplayServer.py --port 8999 --isolate-rooms
-Run from the repo root:  python tools/e2e_playback_test.py
+    python tools/e2e_playback_test.py             # our embedded server
+    python tools/e2e_playback_test.py --upstream  # real syncplay server on :8999
+                                                  # (protocol-compat check)
 """
 
 from __future__ import annotations
@@ -21,8 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from groupwatch.players.base import PlayerAdapter
 from groupwatch.syncplay.client import SyncplayClient
+from groupwatch.syncplay.server import SyncplayServer
 
-HOST, PORT, ROOM = "127.0.0.1", 8999, "groupwatch"
+HOST, ROOM = "127.0.0.1", "groupwatch"
 
 
 class MockPlayer(PlayerAdapter):
@@ -100,9 +102,20 @@ def wait_for(desc: str, cond, timeout: float = 8.0) -> bool:
 
 
 def main() -> int:
+    upstream = "--upstream" in sys.argv
+    server = None
+    if not upstream:
+        server = SyncplayServer(port=0, room=ROOM)  # port 0 -> ephemeral
+        server.start()
+        print(f"[test] embedded server listening on :{server.port}")
+        port = server.port
+    else:
+        port = 8999
+        print(f"[test] using external upstream server on :{port}")
+
     player_a, player_b = MockPlayer(), MockPlayer()
-    a = SyncplayClient(HOST, PORT, "tester-a", ROOM, player_a)
-    b = SyncplayClient(HOST, PORT, "tester-b", ROOM, player_b)
+    a = SyncplayClient(HOST, port, "tester-a", ROOM, player_a)
+    b = SyncplayClient(HOST, port, "tester-b", ROOM, player_b)
     passed = True
     try:
         a.connect()
@@ -135,6 +148,9 @@ def main() -> int:
     finally:
         a.close()
         b.close()
+        if server is not None:
+            time.sleep(0.3)
+            server.stop()
 
     print("[test] PASS" if passed else "[test] FAIL")
     return 0 if passed else 1
